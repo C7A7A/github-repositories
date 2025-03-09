@@ -4,8 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.c7a7a.githubrepositories.data.BranchData;
 import io.github.c7a7a.githubrepositories.data.RepositoryBasicData;
+import io.github.c7a7a.githubrepositories.exceptions.UserNotFoundException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,6 +29,12 @@ public class GithubApiService {
         String response = webClient.get()
                 .uri("/users/{user}/repos", user)
                 .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> {
+                    if (clientResponse.statusCode() == HttpStatus.NOT_FOUND) {
+                        return Mono.error(new UserNotFoundException("User " + user + " was not found"));
+                    }
+                    return Mono.error(new RuntimeException("Client error"));
+                })
                 .bodyToMono(String.class)
                 .block();
 

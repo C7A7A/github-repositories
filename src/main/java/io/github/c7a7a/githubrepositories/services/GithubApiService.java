@@ -79,5 +79,4 @@ public class GithubApiService {
             return Multi.createFrom().failure(new RuntimeException("Failed to parse JSON repositories response", e));
         }
     }
-
 }

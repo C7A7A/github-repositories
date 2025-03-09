@@ -18,7 +18,7 @@ public class RepositoryController {
     }
 
     @GetMapping
-    private Multi<RepositoryFullData> getRepositories(@RequestParam String user) {
+    public Multi<RepositoryFullData> getRepositories(@RequestParam String user) {
         return service.getRepositories(user);
     }
 

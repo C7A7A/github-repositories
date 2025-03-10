@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.c7a7a.githubrepositories.data.BranchData;
 import io.github.c7a7a.githubrepositories.data.RepositoryBasicData;
 import io.github.c7a7a.githubrepositories.exceptions.UserNotFoundException;
+import io.github.c7a7a.githubrepositories.exceptions.RateLimitExceededException;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
@@ -20,8 +22,20 @@ public class GithubApiService {
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
 
-    public GithubApiService(WebClient.Builder builder, ObjectMapper objectMapper) {
-        this.webClient = builder.baseUrl("https://api.github.com").build();
+    public GithubApiService(WebClient.Builder builder, @Value("${github.token:}") String token, ObjectMapper objectMapper) {
+        if (token.isEmpty()) {
+//            System.out.println("TOKEN NOT FOUND!");
+            this.webClient = builder
+                    .baseUrl("https://api.github.com")
+                    .build();
+        } else {
+//            System.out.println("TOKEN FOUND!");
+            this.webClient = builder
+                    .baseUrl("https://api.github.com")
+                    .defaultHeader("Authorization", "Bearer " + token)
+                    .build();
+        }
+
         this.objectMapper = objectMapper;
     }
 
@@ -33,6 +47,9 @@ public class GithubApiService {
                     .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> {
                         if (clientResponse.statusCode() == HttpStatus.NOT_FOUND) {
                             return Mono.error(new UserNotFoundException("User " + user + " was not found"));
+                        }
+                        if (clientResponse.statusCode() == HttpStatus.FORBIDDEN) {
+                            return Mono.error(new RateLimitExceededException("Exceeded github REST API rate limit"));
                         }
                         return Mono.error(new RuntimeException("Client error"));
                     })

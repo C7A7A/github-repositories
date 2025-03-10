@@ -23,7 +23,7 @@ public class RepositoryService {
                             .collect()
                             .asList()
                             .onItem()
-                            .transform(branchData -> new RepositoryFullData(owner, name, branchData))
+                            .transform(branchData -> new RepositoryFullData(name, owner, branchData))
                             .toMulti();
                 });
     }
